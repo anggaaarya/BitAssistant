@@ -1,4 +1,4 @@
-\import { Telegraf, Markup } from 'telegraf';
+import { Telegraf, Markup } from 'telegraf';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 
@@ -735,7 +735,6 @@ bot.on('text', async (ctx) => {
 });
 
 // ==================== EKSPOR UNTUK VERCEL (WEBHOOK) ====================
-// HANYA INI yang diekspor untuk Vercel (tanpa bot.launch)
 export default async (req: any, res: any) => {
   if (req.method === 'POST') {
     try {
