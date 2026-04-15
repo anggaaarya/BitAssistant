@@ -13,7 +13,6 @@ if (!BOT_TOKEN) {
 const prisma = new PrismaClient();
 const bot = new Telegraf(BOT_TOKEN || '');
 
-// Session untuk menyimpan state registrasi
 const registrationSession = new Map<number, any>();
 
 function isPrivateChat(ctx: any): boolean {
@@ -27,23 +26,13 @@ function isGroupChat(ctx: any): boolean {
 }
 
 async function getUserRole(telegramId: number): Promise<string | null> {
-  try {
-    const user = await prisma.user.findUnique({ where: { telegramId } });
-    return user?.role || null;
-  } catch (error) {
-    console.error('Error getUserRole:', error);
-    return null;
-  }
+  const user = await prisma.user.findUnique({ where: { telegramId } });
+  return user?.role || null;
 }
 
 async function isUserRegistered(telegramId: number): Promise<boolean> {
-  try {
-    const user = await prisma.user.findUnique({ where: { telegramId } });
-    return user?.isRegistered || false;
-  } catch (error) {
-    console.error('Error isUserRegistered:', error);
-    return false;
-  }
+  const user = await prisma.user.findUnique({ where: { telegramId } });
+  return user?.isRegistered || false;
 }
 
 async function isAdminOrSO(telegramId: number): Promise<boolean> {
@@ -123,7 +112,7 @@ Status: ${statusText}`;
 
 async function sendOrEditOrderMessage(ctx: any, order: any, status: string, actionBy?: string) {
   let statusText = '';
-  let keyboard;
+  let keyboard: any;
 
   switch (status) {
     case 'pending':
@@ -143,14 +132,6 @@ async function sendOrEditOrderMessage(ctx: any, order: any, status: string, acti
       keyboard = Markup.inlineKeyboard([
         [Markup.button.callback('↩️ Rollback', `rollback_${order.id}`)]
       ]);
-      break;
-    case 'rejected':
-      statusText = 'DITOLAK';
-      keyboard = undefined;
-      break;
-    case 'cancelled':
-      statusText = 'DIBATALKAN';
-      keyboard = undefined;
       break;
     default:
       statusText = status;
@@ -177,42 +158,33 @@ async function completeRegistration(ctx: any, telegramId: number, data: any) {
   const username = ctx.from.username || 'unknown';
   const firstName = ctx.from.first_name || '';
   
-  console.log('Menyimpan data registrasi:', data);
-  
-  try {
-    await prisma.user.upsert({
-      where: { telegramId },
-      update: {
-        username,
-        firstName,
-        namaLengkap: data.nama,
-        nik: data.nik,
-        noHp: data.noHp,
-        perusahaan: data.perusahaan,
-        loker: data.loker,
-        atasanTif: data.atasanTif,
-        isRegistered: true
-      },
-      create: {
-        telegramId,
-        username,
-        firstName,
-        namaLengkap: data.nama,
-        nik: data.nik,
-        noHp: data.noHp,
-        perusahaan: data.perusahaan,
-        loker: data.loker,
-        atasanTif: data.atasanTif,
-        role: '',
-        isRegistered: true
-      }
-    });
-    console.log('Data berhasil disimpan ke database');
-  } catch (error) {
-    console.error('Error menyimpan data:', error);
-    await ctx.reply('Gagal menyimpan data registrasi. Silakan coba lagi.');
-    return;
-  }
+  await prisma.user.upsert({
+    where: { telegramId },
+    update: {
+      username,
+      firstName,
+      namaLengkap: data.nama,
+      nik: data.nik,
+      noHp: data.noHp,
+      perusahaan: data.perusahaan,
+      loker: data.loker,
+      atasanTif: data.atasanTif,
+      isRegistered: true
+    },
+    create: {
+      telegramId,
+      username,
+      firstName,
+      namaLengkap: data.nama,
+      nik: data.nik,
+      noHp: data.noHp,
+      perusahaan: data.perusahaan,
+      loker: data.loker,
+      atasanTif: data.atasanTif,
+      role: '',
+      isRegistered: true
+    }
+  });
   
   registrationSession.delete(telegramId);
   await showRoleSelection(ctx);
@@ -236,18 +208,13 @@ async function showRoleSelection(ctx: any) {
   );
 }
 
-// ==================== MENU ADMIN ====================
-
 async function showAdminMenu(ctx: any) {
   const keyboard = Markup.inlineKeyboard([
     [Markup.button.callback('📋 Kelola User', 'admin_kelola_user')],
     [Markup.button.callback('📊 Status Orbit', 'admin_status_orbit')],
     [Markup.button.callback('❌ Tutup Menu', 'admin_close_menu')]
   ]);
-  await ctx.reply(
-    `Menu Admin\n\nSilakan pilih menu di bawah ini:`,
-    keyboard
-  );
+  await ctx.reply(`Menu Admin\n\nSilakan pilih menu di bawah ini:`, keyboard);
 }
 
 async function showUserManagementMenu(ctx: any) {
@@ -258,10 +225,7 @@ async function showUserManagementMenu(ctx: any) {
     [Markup.button.callback('✏️ Edit User', 'admin_edit_user')],
     [Markup.button.callback('🔙 Kembali ke Menu Utama', 'admin_back_to_menu')]
   ]);
-  await ctx.reply(
-    `Kelola User\n\nPilih aksi yang ingin dilakukan:`,
-    keyboard
-  );
+  await ctx.reply(`Kelola User\n\nPilih aksi yang ingin dilakukan:`, keyboard);
 }
 
 async function showStatusOrbit(ctx: any) {
@@ -351,46 +315,34 @@ async function editUserRole(ctx: any, targetId: number, newRole: string) {
   await ctx.reply(`Role user @${user.username} (ID: ${targetId}) telah diubah menjadi ${newRole}.`);
 }
 
-const adminSession = new Map<number, { action: string; step: number; data: any }>();
-
-// ==================== CALLBACKS ====================
+const adminSession = new Map<number, any>();
 
 bot.action('role_TIF', async (ctx) => {
-  try {
-    const telegramId = ctx.from.id;
-    const username = ctx.from.username || 'unknown';
-    const firstName = ctx.from.first_name || '';
-    
-    await prisma.user.update({
-      where: { telegramId },
-      data: { username, firstName, role: 'TIF' }
-    });
-    
-    await ctx.answerCbQuery('Role TIF District dipilih');
-    await ctx.reply(`Anda telah terdaftar sebagai TIF District.\n\nSekarang Anda bisa membuat request di GRUP dengan mengirim pesan:\n#REQORBIT #PINDAHUPLINK\nCustomer : ...\nkode Perangkat Orbit : ...\nno Tiket : ...\nlayanan : ...\nWITEL/STO : ...\nDatek Metro eksisting : ...`);
-  } catch (error) {
-    console.error('Error in role_TIF:', error);
-    await ctx.answerCbQuery('Terjadi kesalahan');
-  }
+  const telegramId = ctx.from.id;
+  const username = ctx.from.username || 'unknown';
+  const firstName = ctx.from.first_name || '';
+  
+  await prisma.user.update({
+    where: { telegramId },
+    data: { username, firstName, role: 'TIF' }
+  });
+  
+  await ctx.answerCbQuery('Role TIF District dipilih');
+  await ctx.reply(`Anda telah terdaftar sebagai TIF District.\n\nSekarang Anda bisa membuat request di GRUP dengan mengirim pesan:\n#REQORBIT #PINDAHUPLINK`);
 });
 
 bot.action('role_TA', async (ctx) => {
-  try {
-    const telegramId = ctx.from.id;
-    const username = ctx.from.username || 'unknown';
-    const firstName = ctx.from.first_name || '';
-    
-    await prisma.user.update({
-      where: { telegramId },
-      data: { username, firstName, role: 'TA' }
-    });
-    
-    await ctx.answerCbQuery('Role TA dipilih');
-    await ctx.reply(`Anda telah terdaftar sebagai TA.\n\nSekarang Anda bisa membuat request di GRUP dengan mengirim pesan:\n#REQORBIT #PINDAHUPLINK\nCustomer : ...\nkode Perangkat Orbit : ...\nno Tiket : ...\nlayanan : ...\nWITEL/STO : ...\nDatek Metro eksisting : ...`);
-  } catch (error) {
-    console.error('Error in role_TA:', error);
-    await ctx.answerCbQuery('Terjadi kesalahan');
-  }
+  const telegramId = ctx.from.id;
+  const username = ctx.from.username || 'unknown';
+  const firstName = ctx.from.first_name || '';
+  
+  await prisma.user.update({
+    where: { telegramId },
+    data: { username, firstName, role: 'TA' }
+  });
+  
+  await ctx.answerCbQuery('Role TA dipilih');
+  await ctx.reply(`Anda telah terdaftar sebagai TA.\n\nSekarang Anda bisa membuat request di GRUP dengan mengirim pesan:\n#REQORBIT #PINDAHUPLINK`);
 });
 
 bot.action('role_SOAREA', async (ctx) => {
@@ -468,7 +420,7 @@ bot.action('admin_reset_user', async (ctx) => {
     return;
   }
   await ctx.answerCbQuery();
-  adminSession.set(ctx.from.id, { action: 'reset_user', step: 1, data: {} });
+  adminSession.set(ctx.from.id, { action: 'reset_user', step: 1 });
   await ctx.reply('Masukkan ID Telegram user yang ingin di-reset role-nya:');
 });
 
@@ -478,7 +430,7 @@ bot.action('admin_hapus_user', async (ctx) => {
     return;
   }
   await ctx.answerCbQuery();
-  adminSession.set(ctx.from.id, { action: 'delete_user', step: 1, data: {} });
+  adminSession.set(ctx.from.id, { action: 'delete_user', step: 1 });
   await ctx.reply('Masukkan ID Telegram user yang ingin dihapus:');
 });
 
@@ -488,314 +440,251 @@ bot.action('admin_edit_user', async (ctx) => {
     return;
   }
   await ctx.answerCbQuery();
-  adminSession.set(ctx.from.id, { action: 'edit_user', step: 1, data: {} });
+  adminSession.set(ctx.from.id, { action: 'edit_user', step: 1 });
   await ctx.reply('Masukkan ID Telegram user yang ingin diubah role-nya:');
 });
 
-// Callback untuk order
 bot.action(/accept_(\d+)/, async (ctx) => {
-  try {
-    const userId = ctx.from.id;
-    if (!(await isAdminOrSO(userId))) {
-      await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa accept.');
-      return;
-    }
-    const orderId = parseInt(ctx.match[1]);
-    const order = await prisma.order.update({
-      where: { id: orderId },
-      data: { status: 'accepted', acceptedBy: ctx.from.username || 'unknown', acceptedAt: new Date() }
-    });
-    await ctx.answerCbQuery('Order diterima');
-    await sendOrEditOrderMessage(ctx, order, 'accepted', ctx.from.username);
-  } catch (error) {
-    console.error('Error in accept:', error);
-    await ctx.answerCbQuery('Terjadi kesalahan');
+  const userId = ctx.from.id;
+  if (!(await isAdminOrSO(userId))) {
+    await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa accept.');
+    return;
   }
+  const orderId = parseInt(ctx.match[1]);
+  const order = await prisma.order.update({
+    where: { id: orderId },
+    data: { status: 'accepted', acceptedBy: ctx.from.username || 'unknown', acceptedAt: new Date() }
+  });
+  await ctx.answerCbQuery('Order diterima');
+  await sendOrEditOrderMessage(ctx, order, 'accepted', ctx.from.username);
 });
 
 bot.action(/reject_(\d+)/, async (ctx) => {
-  try {
-    if (!(await isAdminOrSO(ctx.from.id))) {
-      await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa reject.');
-      return;
-    }
-    const orderId = parseInt(ctx.match[1]);
-    const order = await prisma.order.update({ where: { id: orderId }, data: { status: 'rejected' } });
-    await ctx.answerCbQuery('Order ditolak');
-    await sendOrEditOrderMessage(ctx, order, 'rejected', ctx.from.username);
-  } catch (error) {
-    console.error('Error in reject:', error);
-    await ctx.answerCbQuery('Terjadi kesalahan');
+  if (!(await isAdminOrSO(ctx.from.id))) {
+    await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa reject.');
+    return;
   }
+  const orderId = parseInt(ctx.match[1]);
+  const order = await prisma.order.update({ where: { id: orderId }, data: { status: 'rejected' } });
+  await ctx.answerCbQuery('Order ditolak');
+  await ctx.editMessageText(`${order.orderNumber} - DITOLAK`);
 });
 
 bot.action(/done_(\d+)/, async (ctx) => {
-  try {
-    if (!(await isAdminOrSO(ctx.from.id))) {
-      await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa menyelesaikan.');
-      return;
-    }
-    const orderId = parseInt(ctx.match[1]);
-    const order = await prisma.order.update({
-      where: { id: orderId },
-      data: { status: 'done', completedBy: ctx.from.username || 'unknown', completedAt: new Date() }
-    });
-    await ctx.answerCbQuery('Order selesai');
-    await sendOrEditOrderMessage(ctx, order, 'done', ctx.from.username);
-  } catch (error) {
-    console.error('Error in done:', error);
-    await ctx.answerCbQuery('Terjadi kesalahan');
+  if (!(await isAdminOrSO(ctx.from.id))) {
+    await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa menyelesaikan.');
+    return;
   }
+  const orderId = parseInt(ctx.match[1]);
+  const order = await prisma.order.update({
+    where: { id: orderId },
+    data: { status: 'done', completedBy: ctx.from.username || 'unknown', completedAt: new Date() }
+  });
+  await ctx.answerCbQuery('Order selesai');
+  await sendOrEditOrderMessage(ctx, order, 'done', ctx.from.username);
 });
 
 bot.action(/cancel_(\d+)/, async (ctx) => {
-  try {
-    if (!(await isAdminOrSO(ctx.from.id))) {
-      await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa membatalkan.');
-      return;
-    }
-    const orderId = parseInt(ctx.match[1]);
-    const order = await prisma.order.update({ where: { id: orderId }, data: { status: 'cancelled' } });
-    await ctx.answerCbQuery('Order dibatalkan');
-    await sendOrEditOrderMessage(ctx, order, 'cancelled', ctx.from.username);
-  } catch (error) {
-    console.error('Error in cancel:', error);
-    await ctx.answerCbQuery('Terjadi kesalahan');
+  if (!(await isAdminOrSO(ctx.from.id))) {
+    await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa membatalkan.');
+    return;
   }
+  const orderId = parseInt(ctx.match[1]);
+  const order = await prisma.order.update({ where: { id: orderId }, data: { status: 'cancelled' } });
+  await ctx.answerCbQuery('Order dibatalkan');
+  await ctx.editMessageText(`${order.orderNumber} - DIBATALKAN`);
 });
 
 bot.action(/rollback_(\d+)/, async (ctx) => {
-  try {
-    if (!(await isAdminOrSO(ctx.from.id))) {
-      await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa melakukan rollback.');
-      return;
-    }
-    const orderId = parseInt(ctx.match[1]);
-    const order = await prisma.order.update({
-      where: { id: orderId },
-      data: { status: 'pending', acceptedBy: null, acceptedAt: null, completedBy: null, completedAt: null }
-    });
-    await ctx.answerCbQuery('Order di-rollback');
-    await sendOrEditOrderMessage(ctx, order, 'pending');
-  } catch (error) {
-    console.error('Error in rollback:', error);
-    await ctx.answerCbQuery('Terjadi kesalahan');
+  if (!(await isAdminOrSO(ctx.from.id))) {
+    await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa melakukan rollback.');
+    return;
   }
+  const orderId = parseInt(ctx.match[1]);
+  const order = await prisma.order.update({
+    where: { id: orderId },
+    data: { status: 'pending', acceptedBy: null, acceptedAt: null, completedBy: null, completedAt: null }
+  });
+  await ctx.answerCbQuery('Order di-rollback');
+  await sendOrEditOrderMessage(ctx, order, 'pending');
 });
 
-// ==================== COMMANDS ====================
-
 bot.command('start', async (ctx) => {
-  try {
-    console.log('Start command received from:', ctx.from.id);
-    
-    const telegramId = ctx.from.id;
-    const isRegistered = await isUserRegistered(telegramId);
-    const role = await getUserRole(telegramId);
-    
-    console.log('User:', { telegramId, isRegistered, role });
-    
-    if (isGroupChat(ctx)) {
-      await ctx.reply('Registrasi tidak bisa dilakukan di grup!\n\nSilakan chat bot ini secara PRIVATE (DM) dan kirim /start untuk registrasi.');
-      return;
-    }
-    
-    if (isRegistered && role === 'ADMIN') {
-      await showAdminMenu(ctx);
-      return;
-    }
-    
-    if (isRegistered && role) {
-      await ctx.reply(`Bit Assistant aktif!\nRole Anda: ${role}\n\nCatatan: Request hanya bisa dibuat di GRUP.\n\nKirim pesan dengan #REQORBIT #PINDAHUPLINK`);
-      return;
-    }
-    
-    if (isRegistered && !role) {
-      await showRoleSelection(ctx);
-      return;
-    }
-    
-    await startRegistration(ctx);
-  } catch (error) {
-    console.error('Error in /start command:', error);
-    await ctx.reply('Terjadi kesalahan. Silakan coba lagi nanti.\n\nError: ' + error.message);
+  const telegramId = ctx.from.id;
+  const isRegistered = await isUserRegistered(telegramId);
+  const role = await getUserRole(telegramId);
+  
+  if (isGroupChat(ctx)) {
+    await ctx.reply('Registrasi tidak bisa dilakukan di grup!\n\nSilakan chat bot ini secara PRIVATE (DM) dan kirim /start untuk registrasi.');
+    return;
   }
+  
+  if (isRegistered && role === 'ADMIN') {
+    await showAdminMenu(ctx);
+    return;
+  }
+  
+  if (isRegistered && role) {
+    await ctx.reply(`Bit Assistant aktif!\nRole Anda: ${role}\n\nCatatan: Request hanya bisa dibuat di GRUP.\n\nKirim pesan dengan #REQORBIT #PINDAHUPLINK`);
+    return;
+  }
+  
+  if (isRegistered && !role) {
+    await showRoleSelection(ctx);
+    return;
+  }
+  
+  await startRegistration(ctx);
 });
 
 bot.command('adduser', async (ctx) => {
-  try {
-    const callerRole = await getUserRole(ctx.from.id);
-    if (callerRole !== 'ADMIN') {
-      await ctx.reply('Hanya admin yang bisa menambahkan user.');
+  const callerRole = await getUserRole(ctx.from.id);
+  if (callerRole !== 'ADMIN') {
+    await ctx.reply('Hanya admin yang bisa menambahkan user.');
+    return;
+  }
+  const args = ctx.message.text.split(' ');
+  if (args.length < 4) {
+    await ctx.reply('Format: /adduser <telegramId> <username> <role>\nRole: ADMIN, SOAREA, TIF, TA');
+    return;
+  }
+  const telegramId = parseInt(args[1]);
+  const username = args[2];
+  const role = args[3].toUpperCase();
+  if (!['ADMIN', 'SOAREA', 'TIF', 'TA'].includes(role)) {
+    await ctx.reply('Role tidak valid. Gunakan: ADMIN, SOAREA, TIF, TA');
+    return;
+  }
+  if (isNaN(telegramId)) {
+    await ctx.reply('telegramId harus berupa angka.');
+    return;
+  }
+  await prisma.user.upsert({
+    where: { telegramId },
+    update: { username, role, isRegistered: true },
+    create: { telegramId, username, role, firstName: '', isRegistered: true }
+  });
+  await ctx.reply(`User ${username} (ID: ${telegramId}) dengan role ${role} berhasil ditambahkan/diupdate.`);
+});
+
+bot.on('text', async (ctx) => {
+  const pesan = ctx.message.text;
+  const telegramId = ctx.from.id;
+  
+  const adminAction = adminSession.get(telegramId);
+  if (adminAction && isPrivateChat(ctx)) {
+    const targetId = parseInt(pesan);
+    if (isNaN(targetId)) {
+      await ctx.reply('ID harus berupa angka. Silakan coba lagi.');
+      adminSession.delete(telegramId);
+      await showUserManagementMenu(ctx);
       return;
     }
-    const args = ctx.message.text.split(' ');
-    if (args.length < 4) {
-      await ctx.reply('Format: /adduser <telegramId> <username> <role>\nRole: ADMIN, SOAREA, TIF, TA');
+    
+    if (adminAction.action === 'reset_user') {
+      await resetUserRole(ctx, targetId);
+    } else if (adminAction.action === 'delete_user') {
+      await deleteUser(ctx, targetId);
+    } else if (adminAction.action === 'edit_user') {
+      adminSession.set(telegramId, { action: 'edit_user_role', step: 2, targetId });
+      await ctx.reply('Masukkan role baru (ADMIN, SOAREA, TIF, TA):');
       return;
     }
-    const telegramId = parseInt(args[1]);
-    const username = args[2];
-    const role = args[3].toUpperCase();
-    if (!['ADMIN', 'SOAREA', 'TIF', 'TA'].includes(role)) {
+    adminSession.delete(telegramId);
+    await showUserManagementMenu(ctx);
+    return;
+  }
+  
+  const editAction = adminSession.get(telegramId);
+  if (editAction && editAction.action === 'edit_user_role' && editAction.step === 2 && isPrivateChat(ctx)) {
+    const newRole = pesan.toUpperCase();
+    if (!['ADMIN', 'SOAREA', 'TIF', 'TA'].includes(newRole)) {
       await ctx.reply('Role tidak valid. Gunakan: ADMIN, SOAREA, TIF, TA');
       return;
     }
-    if (isNaN(telegramId)) {
-      await ctx.reply('telegramId harus berupa angka.');
-      return;
-    }
-    await prisma.user.upsert({
-      where: { telegramId },
-      update: { username, role, isRegistered: true },
-      create: { telegramId, username, role, firstName: '', isRegistered: true }
-    });
-    await ctx.reply(`User ${username} (ID: ${telegramId}) dengan role ${role} berhasil ditambahkan/diupdate.`);
-  } catch (error) {
-    console.error('Error in adduser:', error);
-    await ctx.reply('Gagal menambahkan user: ' + error.message);
+    await editUserRole(ctx, editAction.targetId, newRole);
+    adminSession.delete(telegramId);
+    await showUserManagementMenu(ctx);
+    return;
   }
-});
-
-// ==================== HANDLER PESAN TEKS ====================
-
-bot.on('text', async (ctx) => {
-  try {
-    const pesan = ctx.message.text;
-    const telegramId = ctx.from.id;
-    
-    const adminAction = adminSession.get(telegramId);
-    if (adminAction && isPrivateChat(ctx)) {
-      const targetId = parseInt(pesan);
-      if (isNaN(targetId)) {
-        await ctx.reply('ID harus berupa angka. Silakan coba lagi.');
-        adminSession.delete(telegramId);
-        await showUserManagementMenu(ctx);
-        return;
-      }
-      
-      switch (adminAction.action) {
-        case 'reset_user':
-          await resetUserRole(ctx, targetId);
-          break;
-        case 'delete_user':
-          await deleteUser(ctx, targetId);
-          break;
-        case 'edit_user':
-          adminSession.set(telegramId, { action: 'edit_user_role', step: 2, data: { targetId } });
-          await ctx.reply('Masukkan role baru (ADMIN, SOAREA, TIF, TA):');
-          return;
-        default:
-          break;
-      }
-      adminSession.delete(telegramId);
-      await showUserManagementMenu(ctx);
-      return;
-    }
-    
-    const editRoleAction = adminSession.get(telegramId);
-    if (editRoleAction && editRoleAction.action === 'edit_user_role' && editRoleAction.step === 2 && isPrivateChat(ctx)) {
-      const newRole = pesan.toUpperCase();
-      if (!['ADMIN', 'SOAREA', 'TIF', 'TA'].includes(newRole)) {
-        await ctx.reply('Role tidak valid. Gunakan: ADMIN, SOAREA, TIF, TA');
-        return;
-      }
-      await editUserRole(ctx, editRoleAction.data.targetId, newRole);
-      adminSession.delete(telegramId);
-      await showUserManagementMenu(ctx);
-      return;
-    }
-    
-    const session = registrationSession.get(telegramId);
-    if (session && isPrivateChat(ctx)) {
-      switch (session.step) {
-        case 1:
-          session.data.nama = pesan;
-          session.step = 2;
-          await ctx.reply('Masukkan NIK Anda:');
-          break;
-        case 2:
-          session.data.nik = pesan;
-          session.step = 3;
-          await ctx.reply('Masukkan Nomor HP Anda:');
-          break;
-        case 3:
-          session.data.noHp = pesan;
-          session.step = 4;
-          await ctx.reply('Masukkan Perusahaan Anda:');
-          break;
-        case 4:
-          session.data.perusahaan = pesan;
-          session.step = 5;
-          const lokerKeyboard = Markup.inlineKeyboard([
-            [Markup.button.callback('ROC-2', 'loker_ROC-2')],
-            [Markup.button.callback('JAKUT', 'loker_JAKUT'), Markup.button.callback('JAKPUS', 'loker_JAKPUS'), Markup.button.callback('JAKTIM', 'loker_JAKTIM')],
-            [Markup.button.callback('JAKBAR', 'loker_JAKBAR'), Markup.button.callback('JAKSEL', 'loker_JAKSEL')],
-            [Markup.button.callback('BEKASI', 'loker_BEKASI'), Markup.button.callback('BANTEN', 'loker_BANTEN'), Markup.button.callback('BOGOR', 'loker_BOGOR')],
-            [Markup.button.callback('TANGERANG', 'loker_TANGERANG'), Markup.button.callback('EOS/DA', 'loker_EOS/DA')]
-          ]);
-          await ctx.reply('Pilih District/Loker:', lokerKeyboard);
-          break;
-        case 6:
-          session.data.atasanTif = pesan;
-          await completeRegistration(ctx, telegramId, session.data);
-          break;
-        default:
-          break;
-      }
-      return;
-    }
-    
-    if (isGroupChat(ctx)) {
-      const userRole = await getUserRole(telegramId);
-      const isRegistered = await isUserRegistered(telegramId);
-      
-      if (!isRegistered || !userRole) {
-        return;
-      }
-      
-      if (pesan.includes('#REQORBIT') && pesan.includes('#PINDAHUPLINK')) {
-        const { customer, kodePerangkat, noTiket, layanan, witelSto, datekMetro } = parseRequestMessage(pesan);
-        
-        if (!customer || !kodePerangkat) {
-          await ctx.reply('Format tidak lengkap. Pastikan ada "Customer : ..." dan "kode Perangkat Orbit : ..."');
-          return;
-        }
-        
-        const orderNumber = await generateOrderNumber();
-        try {
-          const order = await prisma.order.create({
-            data: {
-              orderNumber,
-              customer,
-              kodePerangkat,
-              noTiket: noTiket || '-',
-              layanan: layanan || '-',
-              witelSto: witelSto || '-',
-              datekMetro: datekMetro || '-',
-              requesterNik: ctx.from.id.toString(),
-              requesterUsername: ctx.from.username || 'unknown',
-              requesterRole: userRole,
-              status: 'pending'
-            }
-          });
-          
-          await sendOrEditOrderMessage(ctx, order, 'pending');
-        } catch (error) {
-          console.error(error);
-          await ctx.reply('Gagal menyimpan request: ' + error.message);
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Unhandled error in text handler:', error);
-  }
-});
-
-// ==================== EKSPOR UNTUK VERCEL (WEBHOOK) ====================
-export default async (req: any, res: any) => {
-  console.log('Request received:', req.method);
   
+  const session = registrationSession.get(telegramId);
+  if (session && isPrivateChat(ctx)) {
+    switch (session.step) {
+      case 1:
+        session.data.nama = pesan;
+        session.step = 2;
+        await ctx.reply('Masukkan NIK Anda:');
+        break;
+      case 2:
+        session.data.nik = pesan;
+        session.step = 3;
+        await ctx.reply('Masukkan Nomor HP Anda:');
+        break;
+      case 3:
+        session.data.noHp = pesan;
+        session.step = 4;
+        await ctx.reply('Masukkan Perusahaan Anda:');
+        break;
+      case 4:
+        session.data.perusahaan = pesan;
+        session.step = 5;
+        const lokerKeyboard = Markup.inlineKeyboard([
+          [Markup.button.callback('ROC-2', 'loker_ROC-2')],
+          [Markup.button.callback('JAKUT', 'loker_JAKUT'), Markup.button.callback('JAKPUS', 'loker_JAKPUS'), Markup.button.callback('JAKTIM', 'loker_JAKTIM')],
+          [Markup.button.callback('JAKBAR', 'loker_JAKBAR'), Markup.button.callback('JAKSEL', 'loker_JAKSEL')],
+          [Markup.button.callback('BEKASI', 'loker_BEKASI'), Markup.button.callback('BANTEN', 'loker_BANTEN'), Markup.button.callback('BOGOR', 'loker_BOGOR')],
+          [Markup.button.callback('TANGERANG', 'loker_TANGERANG'), Markup.button.callback('EOS/DA', 'loker_EOS/DA')]
+        ]);
+        await ctx.reply('Pilih District/Loker:', lokerKeyboard);
+        break;
+      case 6:
+        session.data.atasanTif = pesan;
+        await completeRegistration(ctx, telegramId, session.data);
+        break;
+    }
+    return;
+  }
+  
+  if (isGroupChat(ctx)) {
+    const userRole = await getUserRole(telegramId);
+    const isRegistered = await isUserRegistered(telegramId);
+    
+    if (!isRegistered || !userRole) {
+      return;
+    }
+    
+    if (pesan.includes('#REQORBIT') && pesan.includes('#PINDAHUPLINK')) {
+      const { customer, kodePerangkat, noTiket, layanan, witelSto, datekMetro } = parseRequestMessage(pesan);
+      
+      if (!customer || !kodePerangkat) {
+        await ctx.reply('Format tidak lengkap. Pastikan ada "Customer : ..." dan "kode Perangkat Orbit : ..."');
+        return;
+      }
+      
+      const orderNumber = await generateOrderNumber();
+      const order = await prisma.order.create({
+        data: {
+          orderNumber,
+          customer,
+          kodePerangkat,
+          noTiket: noTiket || '-',
+          layanan: layanan || '-',
+          witelSto: witelSto || '-',
+          datekMetro: datekMetro || '-',
+          requesterNik: ctx.from.id.toString(),
+          requesterUsername: ctx.from.username || 'unknown',
+          requesterRole: userRole,
+          status: 'pending'
+        }
+      });
+      
+      await sendOrEditOrderMessage(ctx, order, 'pending');
+    }
+  }
+});
+
+export default async (req: any, res: any) => {
   if (req.method === 'POST') {
     try {
       await bot.handleUpdate(req.body, res);
