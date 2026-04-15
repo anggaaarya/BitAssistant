@@ -256,7 +256,6 @@ async function showUserManagementMenu(ctx: any) {
 
 // Status Orbit - Menampilkan perangkat aktif
 async function showStatusOrbit(ctx: any) {
-  // Ambil order dengan status pending atau accepted (belum selesai)
   const activeOrders = await prisma.order.findMany({
     where: {
       status: {
@@ -273,7 +272,6 @@ async function showStatusOrbit(ctx: any) {
   
   let message = 'Status Orbit (Perangkat Aktif)\n\n';
   for (const order of activeOrders) {
-    // Cek apakah order ini hasil rollback (pernah selesai sebelumnya)
     const isRollback = order.completedAt !== null;
     const rollbackNote = isRollback ? ' (rollback)' : '';
     message += `🟢 ${order.kodePerangkat}${rollbackNote}\n`;
@@ -348,7 +346,7 @@ async function editUserRole(ctx: any, targetId: number, newRole: string) {
   await ctx.reply(`Role user @${user.username} (ID: ${targetId}) telah diubah menjadi ${newRole}.`);
 }
 
-// Session untuk admin actions (menyimpan state input)
+// Session untuk admin actions
 const adminSession = new Map<number, { action: string; step: number; data: any }>();
 
 // ==================== CALLBACKS ====================
@@ -751,18 +749,27 @@ bot.on('text', async (ctx) => {
   }
 });
 
+// ==================== EKSPOR UNTUK VERCEL ====================
+// Ini adalah bagian yang PALING PENTING untuk Vercel
+export default async (req: any, res: any) => {
+  // Hanya terima method POST dari Telegram
+  if (req.method === 'POST') {
+    try {
+      await bot.handleUpdate(req.body, res);
+      res.status(200).end();
+    } catch (error) {
+      console.error('Error handling update:', error);
+      res.status(500).end();
+    }
+  } else {
+    // Method GET akan menampilkan pesan sederhana (bukan error 404 atau halaman login)
+    res.status(200).send('Bit Assistant Bot is running!');
+  }
+};
+
+// ==================== UNTUK DEVELOPMENT LOKAL ====================
 if (process.env.NODE_ENV !== 'production') {
-  bot.launch().then(() => console.log('Bit Assistant running...'));
+  bot.launch().then(() => console.log('Bit Assistant running in development mode (polling)'));
   process.once('SIGINT', () => bot.stop('SIGINT'));
   process.once('SIGTERM', () => bot.stop('SIGTERM'));
 }
-
-export default async (req: any, res: any) => {
-  try {
-    await bot.handleUpdate(req.body, res);
-    res.status(200).end();
-  } catch (error) {
-    console.error(error);
-    res.status(500).end();
-  }
-};
