@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  telegramId   BigInt   @unique
+  username     String
+  firstName    String?
+  lastName     String?
+  namaLengkap  String?
+  nik          String?
+  noHp         String?
+  perusahaan   String?
+  loker        String?
+  atasanTif    String?
+  role         String
+  isRegistered Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Order {
+  id                Int       @id @default(autoincrement())
+  orderNumber       String    @unique
+  customer          String
+  kodePerangkat     String
+  noTiket           String
+  layanan           String
+  witelSto          String
+  datekMetro        String
+  requesterNik      String
+  requesterUsername String
+  requesterRole     String
+  status            String    @default("pending")
+  acceptedBy        String?
+  acceptedAt        DateTime?
+  completedBy       String?
+  completedAt       DateTime?
+  cancelledBy       String?
+  cancelledAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
