@@ -1,25 +1,23 @@
 {
-  "name": "bitassistant",
+  "name": "bit-assistant-bot",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Bot Telegram untuk manajemen request Orbit",
+  "main": "api/bot.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "dev": "nodemon --exec ts-node api/bot.ts",
+    "vercel-build": "prisma generate && npm run build"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "@prisma/client": "^5.22.0",
-    "dotenv": "^17.4.2",
-    "prisma": "^5.22.0",
-    "telegraf": "^4.16.3"
+    "dotenv": "^16.4.5",
+    "telegraf": "^4.15.3"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
-    "nodemon": "^3.1.14",
+    "@types/node": "^20.11.24",
+    "nodemon": "^3.1.0",
+    "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
-    "typescript": "^6.0.2"
+    "typescript": "^5.3.3"
   }
 }

@@ -254,7 +254,6 @@ async function showUserManagementMenu(ctx: any) {
   );
 }
 
-// Status Orbit - Menampilkan perangkat aktif
 async function showStatusOrbit(ctx: any) {
   const activeOrders = await prisma.order.findMany({
     where: {
@@ -280,7 +279,6 @@ async function showStatusOrbit(ctx: any) {
   await ctx.reply(message);
 }
 
-// Lihat User (tanpa icon)
 async function showAllUsers(ctx: any) {
   const users = await prisma.user.findMany({
     orderBy: { createdAt: 'desc' }
@@ -304,7 +302,6 @@ async function showAllUsers(ctx: any) {
   await ctx.reply(message);
 }
 
-// Reset User (hapus role)
 async function resetUserRole(ctx: any, targetId: number) {
   const user = await prisma.user.findUnique({ where: { telegramId: targetId } });
   if (!user) {
@@ -319,7 +316,6 @@ async function resetUserRole(ctx: any, targetId: number) {
   await ctx.reply(`Role user @${user.username} (ID: ${targetId}) telah di-reset. User harus memilih role ulang dengan /start.`);
 }
 
-// Hapus User
 async function deleteUser(ctx: any, targetId: number) {
   const user = await prisma.user.findUnique({ where: { telegramId: targetId } });
   if (!user) {
@@ -331,7 +327,6 @@ async function deleteUser(ctx: any, targetId: number) {
   await ctx.reply(`User @${user.username} (ID: ${targetId}) telah dihapus dari database.`);
 }
 
-// Edit User Role
 async function editUserRole(ctx: any, targetId: number, newRole: string) {
   const user = await prisma.user.findUnique({ where: { telegramId: targetId } });
   if (!user) {
@@ -346,7 +341,6 @@ async function editUserRole(ctx: any, targetId: number, newRole: string) {
   await ctx.reply(`Role user @${user.username} (ID: ${targetId}) telah diubah menjadi ${newRole}.`);
 }
 
-// Session untuk admin actions
 const adminSession = new Map<number, { action: string; step: number; data: any }>();
 
 // ==================== CALLBACKS ====================
@@ -405,7 +399,6 @@ bot.action(/loker_(.+)/, async (ctx) => {
   }
 });
 
-// Admin menu callbacks
 bot.action('admin_kelola_user', async (ctx) => {
   if (!(await isAdmin(ctx.from.id))) {
     await ctx.answerCbQuery('Hanya Admin yang bisa mengakses menu ini.');
@@ -557,25 +550,21 @@ bot.command('start', async (ctx) => {
     return;
   }
   
-  // ADMIN: tampilkan menu admin
   if (isRegistered && role === 'ADMIN') {
     await showAdminMenu(ctx);
     return;
   }
   
-  // User sudah registrasi dan punya role (bukan ADMIN)
   if (isRegistered && role) {
     await ctx.reply(`Bit Assistant aktif!\nRole Anda: ${role}\n\nCatatan: Request hanya bisa dibuat di GRUP.\n\nKirim pesan dengan #REQORBIT #PINDAHUPLINK`);
     return;
   }
   
-  // User sudah registrasi tapi belum punya role
   if (isRegistered && !role) {
     await showRoleSelection(ctx);
     return;
   }
   
-  // User belum registrasi
   await startRegistration(ctx);
 });
 
@@ -620,7 +609,6 @@ bot.on('text', async (ctx) => {
   const pesan = ctx.message.text;
   const telegramId = ctx.from.id;
   
-  // Cek admin session untuk input ID
   const adminAction = adminSession.get(telegramId);
   if (adminAction && isPrivateChat(ctx)) {
     const targetId = parseInt(pesan);
@@ -650,7 +638,6 @@ bot.on('text', async (ctx) => {
     return;
   }
   
-  // Cek admin session untuk input role baru (edit user)
   const editRoleAction = adminSession.get(telegramId);
   if (editRoleAction && editRoleAction.action === 'edit_user_role' && editRoleAction.step === 2 && isPrivateChat(ctx)) {
     const newRole = pesan.toUpperCase();
@@ -664,7 +651,6 @@ bot.on('text', async (ctx) => {
     return;
   }
   
-  // Proses registrasi
   const session = registrationSession.get(telegramId);
   if (session && isPrivateChat(ctx)) {
     switch (session.step) {
@@ -705,7 +691,6 @@ bot.on('text', async (ctx) => {
     return;
   }
   
-  // Proses request di grup
   if (isGroupChat(ctx)) {
     const userRole = await getUserRole(telegramId);
     const isRegistered = await isUserRegistered(telegramId);
@@ -750,9 +735,7 @@ bot.on('text', async (ctx) => {
 });
 
 // ==================== EKSPOR UNTUK VERCEL ====================
-// Ini adalah bagian yang PALING PENTING untuk Vercel
 export default async (req: any, res: any) => {
-  // Hanya terima method POST dari Telegram
   if (req.method === 'POST') {
     try {
       await bot.handleUpdate(req.body, res);
@@ -762,14 +745,6 @@ export default async (req: any, res: any) => {
       res.status(500).end();
     }
   } else {
-    // Method GET akan menampilkan pesan sederhana (bukan error 404 atau halaman login)
     res.status(200).send('Bit Assistant Bot is running!');
   }
 };
-
-// ==================== UNTUK DEVELOPMENT LOKAL ====================
-if (process.env.NODE_ENV !== 'production') {
-  bot.launch().then(() => console.log('Bit Assistant running in development mode (polling)'));
-  process.once('SIGINT', () => bot.stop('SIGINT'));
-  process.once('SIGTERM', () => bot.stop('SIGTERM'));
-}
