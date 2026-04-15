@@ -734,17 +734,8 @@ bot.on('text', async (ctx) => {
   }
 });
 
-// ==================== EKSPOR UNTUK VERCEL ====================
-export default async (req: any, res: any) => {
-  if (req.method === 'POST') {
-    try {
-      await bot.handleUpdate(req.body, res);
-      res.status(200).end();
-    } catch (error) {
-      console.error('Error handling update:', error);
-      res.status(500).end();
-    }
-  } else {
-    res.status(200).send('Bit Assistant Bot is running!');
-  }
-};
+// ==================== JALANKAN BOT ====================
+// Mode polling untuk Railway (bukan webhook seperti Vercel)
+bot.launch().then(() => console.log('🤖 Bit Assistant is running...'));
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
