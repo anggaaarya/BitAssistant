@@ -4,6 +4,14 @@
     {
       "src": "api/bot.ts",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/test.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/bot-simple.ts",
+      "use": "@vercel/node"
     }
   ],
   "routes": [

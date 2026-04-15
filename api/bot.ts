@@ -420,7 +420,7 @@ bot.action('admin_reset_user', async (ctx) => {
     return;
   }
   await ctx.answerCbQuery();
-  adminSession.set(ctx.from.id, { action: 'reset_user', step: 1 });
+  adminSession.set(ctx.from.id, { action: 'reset_user' });
   await ctx.reply('Masukkan ID Telegram user yang ingin di-reset role-nya:');
 });
 
@@ -430,7 +430,7 @@ bot.action('admin_hapus_user', async (ctx) => {
     return;
   }
   await ctx.answerCbQuery();
-  adminSession.set(ctx.from.id, { action: 'delete_user', step: 1 });
+  adminSession.set(ctx.from.id, { action: 'delete_user' });
   await ctx.reply('Masukkan ID Telegram user yang ingin dihapus:');
 });
 
@@ -467,7 +467,7 @@ bot.action(/reject_(\d+)/, async (ctx) => {
   const orderId = parseInt(ctx.match[1]);
   const order = await prisma.order.update({ where: { id: orderId }, data: { status: 'rejected' } });
   await ctx.answerCbQuery('Order ditolak');
-  await ctx.editMessageText(`${order.orderNumber} - DITOLAK`);
+  await ctx.reply(`Order ${order.orderNumber} - DITOLAK`);
 });
 
 bot.action(/done_(\d+)/, async (ctx) => {
@@ -492,7 +492,7 @@ bot.action(/cancel_(\d+)/, async (ctx) => {
   const orderId = parseInt(ctx.match[1]);
   const order = await prisma.order.update({ where: { id: orderId }, data: { status: 'cancelled' } });
   await ctx.answerCbQuery('Order dibatalkan');
-  await ctx.editMessageText(`${order.orderNumber} - DIBATALKAN`);
+  await ctx.reply(`Order ${order.orderNumber} - DIBATALKAN`);
 });
 
 bot.action(/rollback_(\d+)/, async (ctx) => {
