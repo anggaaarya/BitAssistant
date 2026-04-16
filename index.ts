@@ -491,7 +491,7 @@ bot.action('admin_edit_user', async (ctx) => {
   await ctx.reply('Masukkan ID Telegram user yang ingin diubah role-nya:');
 });
 
-// Callback untuk /rollback - pilih orbit
+// Callback untuk /rollback - pilih orbit (TAHAP 2: orbit langsung hilang dari Status Orbit)
 bot.action(/rollback_select_(\d+)/, async (ctx) => {
   const orderId = parseInt(ctx.match[1]);
   const order = await prisma.order.findUnique({ where: { id: orderId } });
@@ -503,26 +503,8 @@ bot.action(/rollback_select_(\d+)/, async (ctx) => {
   
   try { await ctx.answerCbQuery(`Orbit ${order.kodePerangkat} dipilih`); } catch (e) {}
   
-  const messageText = buildOrderMessage(order, 'Selesai - Siap di-rollback');
-  const keyboard = Markup.inlineKeyboard([
-    [Markup.button.callback('✔ Selesai', `rollback_execute_${order.id}`), Markup.button.callback('✖ Batal', `rollback_cancel_${order.id}`)]
-  ]);
-  
-  await ctx.reply(messageText, keyboard);
-});
-
-// Callback untuk eksekusi rollback
-bot.action(/rollback_execute_(\d+)/, async (ctx) => {
-  const userId = ctx.from.id;
-  if (!(await isAdminOrSO(userId))) {
-    try { await ctx.answerCbQuery('⛔ Hanya Admin atau SO AREA yang bisa melakukan rollback.'); } catch (e) {}
-    return;
-  }
-  
-  const orderId = parseInt(ctx.match[1]);
-  
-  // Update status menjadi pending
-  const order = await prisma.order.update({
+  // TAHAP 2: Ubah status menjadi 'pending' sementara (orbit hilang dari Status Orbit)
+  await prisma.order.update({
     where: { id: orderId },
     data: { 
       status: 'pending', 
@@ -533,11 +515,38 @@ bot.action(/rollback_execute_(\d+)/, async (ctx) => {
     }
   });
   
-  console.log(`Rollback: Order ${order.orderNumber} status berubah menjadi ${order.status}`);
+  const messageText = buildOrderMessage(order, 'Selesai - Siap di-rollback');
+  const keyboard = Markup.inlineKeyboard([
+    [Markup.button.callback('✔ Selesai', `rollback_complete_${order.id}`), Markup.button.callback('✖ Batal', `rollback_cancel_${order.id}`)]
+  ]);
   
-  try { await ctx.answerCbQuery(`Orbit ${order.kodePerangkat} di-rollback`); } catch (e) {}
-  await ctx.editMessageText(`✅ Orbit ${order.kodePerangkat} berhasil di-rollback ke status pending.`);
-  await ctx.reply(`✅ Orbit ${order.kodePerangkat} telah di-rollback.`);
+  await ctx.reply(messageText, keyboard);
+});
+
+// Callback untuk menyelesaikan rollback (TAHAP 3: orbit aktif kembali)
+bot.action(/rollback_complete_(\d+)/, async (ctx) => {
+  const userId = ctx.from.id;
+  if (!(await isAdminOrSO(userId))) {
+    try { await ctx.answerCbQuery('⛔ Hanya Admin atau SO AREA yang bisa melakukan rollback.'); } catch (e) {}
+    return;
+  }
+  
+  const orderId = parseInt(ctx.match[1]);
+  
+  // TAHAP 3: Ubah status menjadi 'done' (orbit aktif kembali)
+  const order = await prisma.order.update({
+    where: { id: orderId },
+    data: { 
+      status: 'done', 
+      completedBy: ctx.from.username || 'unknown', 
+      completedAt: new Date()
+    }
+  });
+  
+  console.log(`Rollback complete: Order ${order.orderNumber} (${order.kodePerangkat}) status menjadi ${order.status}`);
+  
+  try { await ctx.answerCbQuery(`Rollback selesai, orbit ${order.kodePerangkat} aktif kembali`); } catch (e) {}
+  await ctx.editMessageText(`✅ Rollback selesai. Orbit ${order.kodePerangkat} telah aktif kembali.`);
 });
 
 // Callback untuk batal rollback
@@ -545,11 +554,17 @@ bot.action(/rollback_cancel_(\d+)/, async (ctx) => {
   const orderId = parseInt(ctx.match[1]);
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   
+  // Batalkan rollback: kembalikan status ke 'done'
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: 'done' }
+  });
+  
   try { await ctx.answerCbQuery(`Rollback dibatalkan`); } catch (e) {}
   await ctx.editMessageText(`❌ Rollback untuk orbit ${order?.kodePerangkat} dibatalkan.`);
 });
 
-// Callback untuk tombol rollback di pesan order
+// Callback untuk tombol rollback di pesan order (langsung rollback)
 bot.action(/rollback_(\d+)/, async (ctx) => {
   const userId = ctx.from.id;
   if (!(await isAdminOrSO(userId))) {
@@ -560,17 +575,14 @@ bot.action(/rollback_(\d+)/, async (ctx) => {
   const order = await prisma.order.update({
     where: { id: orderId },
     data: { 
-      status: 'pending', 
-      acceptedBy: null, 
-      acceptedAt: null, 
-      completedBy: null,
-      completedAt: null
+      status: 'done', 
+      completedBy: ctx.from.username || 'unknown', 
+      completedAt: new Date()
     }
   });
-  console.log(`Rollback: Order ${order.orderNumber} status berubah menjadi ${order.status}`);
   try { await ctx.answerCbQuery('Order di-rollback'); } catch (e) {}
-  await sendOrEditOrderMessage(ctx, order, 'pending');
-  await ctx.reply(`Order ${order.orderNumber} telah di-rollback ke status pending.`);
+  await sendOrEditOrderMessage(ctx, order, 'done', ctx.from.username);
+  await ctx.reply(`Order ${order.orderNumber} telah di-rollback.`);
 });
 
 bot.action(/accept_(\d+)/, async (ctx) => {
