@@ -520,6 +520,8 @@ bot.action(/rollback_execute_(\d+)/, async (ctx) => {
   }
   
   const orderId = parseInt(ctx.match[1]);
+  
+  // Update status menjadi pending
   const order = await prisma.order.update({
     where: { id: orderId },
     data: { 
@@ -530,6 +532,8 @@ bot.action(/rollback_execute_(\d+)/, async (ctx) => {
       completedAt: null
     }
   });
+  
+  console.log(`Rollback: Order ${order.orderNumber} status berubah menjadi ${order.status}`);
   
   try { await ctx.answerCbQuery(`Orbit ${order.kodePerangkat} di-rollback`); } catch (e) {}
   await ctx.editMessageText(`✅ Orbit ${order.kodePerangkat} berhasil di-rollback ke status pending.`);
@@ -563,6 +567,7 @@ bot.action(/rollback_(\d+)/, async (ctx) => {
       completedAt: null
     }
   });
+  console.log(`Rollback: Order ${order.orderNumber} status berubah menjadi ${order.status}`);
   try { await ctx.answerCbQuery('Order di-rollback'); } catch (e) {}
   await sendOrEditOrderMessage(ctx, order, 'pending');
   await ctx.reply(`Order ${order.orderNumber} telah di-rollback ke status pending.`);
