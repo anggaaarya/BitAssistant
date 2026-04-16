@@ -230,7 +230,6 @@ async function showUserManagementMenu(ctx: any) {
   await ctx.reply(`Kelola User\n\nPilih aksi yang ingin dilakukan:`, keyboard);
 }
 
-// STATUS ORBIT - HANYA MENAMPILKAN PERANGKAT YANG AKTIF (status = 'done')
 async function showStatusOrbit(ctx: any) {
   const activeOrbits = await prisma.order.findMany({
     where: {
@@ -244,7 +243,7 @@ async function showStatusOrbit(ctx: any) {
     return;
   }
   
-  let message = 'Status Orbit (Aktif)\n\n';
+  let message = `Status Orbit (Aktif: ${activeOrbits.length})\n\n`;
   for (const order of activeOrbits) {
     message += `🟢 ${order.kodePerangkat}\n`;
   }
@@ -252,7 +251,27 @@ async function showStatusOrbit(ctx: any) {
   await ctx.reply(message);
 }
 
-// FITUR /rollback - MENAMPILKAN DAFTAR ORBIT AKTIF DALAM TOMBOL HORIZONTAL
+async function showStatusCommand(ctx: any) {
+  const activeOrbits = await prisma.order.findMany({
+    where: {
+      status: 'done'
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+  
+  if (activeOrbits.length === 0) {
+    await ctx.reply('Status Orbit\n\nTidak ada orbit yang aktif.');
+    return;
+  }
+  
+  let message = `Status Orbit (Aktif: ${activeOrbits.length})\n\n`;
+  for (const order of activeOrbits) {
+    message += `🟢 ${order.kodePerangkat}\n`;
+  }
+  
+  await ctx.reply(message);
+}
+
 async function showRollbackMenu(ctx: any) {
   const activeOrbits = await prisma.order.findMany({
     where: {
@@ -266,7 +285,6 @@ async function showRollbackMenu(ctx: any) {
     return;
   }
   
-  // Buat tombol horizontal (3 tombol per baris)
   const buttons = [];
   for (const order of activeOrbits) {
     buttons.push(Markup.button.callback(order.kodePerangkat, `rollback_select_${order.id}`));
@@ -473,7 +491,7 @@ bot.action('admin_edit_user', async (ctx) => {
   await ctx.reply('Masukkan ID Telegram user yang ingin diubah role-nya:');
 });
 
-// Callback untuk /rollback - pilih orbit (tampilkan detail order + tombol Selesai/Batal)
+// Callback untuk /rollback - pilih orbit
 bot.action(/rollback_select_(\d+)/, async (ctx) => {
   const orderId = parseInt(ctx.match[1]);
   const order = await prisma.order.findUnique({ where: { id: orderId } });
@@ -485,7 +503,6 @@ bot.action(/rollback_select_(\d+)/, async (ctx) => {
   
   await ctx.answerCbQuery(`Orbit ${order.kodePerangkat} dipilih`);
   
-  // Kirim pesan detail order dengan tombol Selesai dan Batal
   const messageText = buildOrderMessage(order, 'Selesai - Siap di-rollback');
   const keyboard = Markup.inlineKeyboard([
     [Markup.button.callback('✔ Selesai', `rollback_execute_${order.id}`), Markup.button.callback('✖ Batal', `rollback_cancel_${order.id}`)]
@@ -528,7 +545,7 @@ bot.action(/rollback_cancel_(\d+)/, async (ctx) => {
   await ctx.editMessageText(`❌ Rollback untuk orbit ${order?.kodePerangkat} dibatalkan.`);
 });
 
-// Callback untuk tombol rollback di pesan order (tetap dipertahankan)
+// Callback untuk tombol rollback di pesan order
 bot.action(/rollback_(\d+)/, async (ctx) => {
   const userId = ctx.from.id;
   if (!(await isAdminOrSO(userId))) {
@@ -662,11 +679,32 @@ bot.command('adduser', async (ctx) => {
   await ctx.reply(`User ${username} (ID: ${telegramId}) dengan role ${role} berhasil ditambahkan/diupdate.`);
 });
 
-// COMMAND /rollback (semua role bisa lihat daftar, tapi eksekusi hanya ADMIN/SOAREA)
-bot.command('rollback', async (ctx) => {
-  // Hanya bisa di grup
+// COMMAND /status - untuk semua role yang punya role
+bot.command('status', async (ctx) => {
   if (!isGroupChat(ctx)) {
-    await ctx.reply('Command /rollback hanya bisa digunakan di grup.');
+    return;
+  }
+  
+  const userRole = await getUserRole(ctx.from.id);
+  const isRegistered = await isUserRegistered(ctx.from.id);
+  
+  if (!isRegistered || !userRole) {
+    return;
+  }
+  
+  await showStatusCommand(ctx);
+});
+
+// COMMAND /rollback - semua role bisa lihat daftar, tapi eksekusi hanya ADMIN/SOAREA
+bot.command('rollback', async (ctx) => {
+  if (!isGroupChat(ctx)) {
+    return;
+  }
+  
+  const userRole = await getUserRole(ctx.from.id);
+  const isRegistered = await isUserRegistered(ctx.from.id);
+  
+  if (!isRegistered || !userRole) {
     return;
   }
   
