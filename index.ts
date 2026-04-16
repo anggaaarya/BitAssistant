@@ -375,7 +375,7 @@ bot.action('role_TIF', async (ctx) => {
     data: { username, firstName, role: 'TIF' }
   });
   
-  await ctx.answerCbQuery('Role TIF District dipilih');
+  try { await ctx.answerCbQuery('Role TIF District dipilih'); } catch (e) {}
   await ctx.reply(`Anda telah terdaftar sebagai TIF District.\n\nSekarang Anda bisa membuat request di GRUP.`);
 });
 
@@ -389,12 +389,12 @@ bot.action('role_TA', async (ctx) => {
     data: { username, firstName, role: 'TA' }
   });
   
-  await ctx.answerCbQuery('Role TA dipilih');
+  try { await ctx.answerCbQuery('Role TA dipilih'); } catch (e) {}
   await ctx.reply(`Anda telah terdaftar sebagai TA.\n\nSekarang Anda bisa membuat request di GRUP.`);
 });
 
 bot.action('role_SOAREA', async (ctx) => {
-  await ctx.answerCbQuery('Hubungi Admin');
+  try { await ctx.answerCbQuery('Hubungi Admin'); } catch (e) {}
   await ctx.reply(
     `Role SO Area\n\n` +
     `Untuk mendapatkan role SO Area, silakan hubungi:\n` +
@@ -411,82 +411,82 @@ bot.action(/loker_(.+)/, async (ctx) => {
   if (session && session.step === 5) {
     session.data.loker = selectedLoker;
     session.step = 6;
-    await ctx.answerCbQuery(`Loker: ${selectedLoker}`);
+    try { await ctx.answerCbQuery(`Loker: ${selectedLoker}`); } catch (e) {}
     await ctx.reply(`Masukkan Atasan TIF (Nama atau NIK):`);
   } else {
-    await ctx.answerCbQuery('Session tidak valid, silakan /start ulang');
+    try { await ctx.answerCbQuery('Session tidak valid, silakan /start ulang'); } catch (e) {}
   }
 });
 
 bot.action('admin_kelola_user', async (ctx) => {
   if (!(await isAdmin(ctx.from.id))) {
-    await ctx.answerCbQuery('Hanya Admin yang bisa mengakses menu ini.');
+    try { await ctx.answerCbQuery('Hanya Admin yang bisa mengakses menu ini.'); } catch (e) {}
     return;
   }
-  await ctx.answerCbQuery();
+  try { await ctx.answerCbQuery(); } catch (e) {}
   await showUserManagementMenu(ctx);
 });
 
 bot.action('admin_status_orbit', async (ctx) => {
   if (!(await isAdmin(ctx.from.id))) {
-    await ctx.answerCbQuery('Hanya Admin yang bisa mengakses menu ini.');
+    try { await ctx.answerCbQuery('Hanya Admin yang bisa mengakses menu ini.'); } catch (e) {}
     return;
   }
-  await ctx.answerCbQuery();
+  try { await ctx.answerCbQuery(); } catch (e) {}
   await showStatusOrbit(ctx);
   await showAdminMenu(ctx);
 });
 
 bot.action('admin_back_to_menu', async (ctx) => {
   if (!(await isAdmin(ctx.from.id))) {
-    await ctx.answerCbQuery('Hanya Admin yang bisa mengakses menu ini.');
+    try { await ctx.answerCbQuery('Hanya Admin yang bisa mengakses menu ini.'); } catch (e) {}
     return;
   }
-  await ctx.answerCbQuery();
+  try { await ctx.answerCbQuery(); } catch (e) {}
   await showAdminMenu(ctx);
 });
 
 bot.action('admin_close_menu', async (ctx) => {
-  await ctx.answerCbQuery('Menu ditutup');
+  try { await ctx.answerCbQuery('Menu ditutup'); } catch (e) {}
   await ctx.deleteMessage();
 });
 
 bot.action('admin_lihat_user', async (ctx) => {
   if (!(await isAdmin(ctx.from.id))) {
-    await ctx.answerCbQuery('Hanya Admin yang bisa mengakses menu ini.');
+    try { await ctx.answerCbQuery('Hanya Admin yang bisa mengakses menu ini.'); } catch (e) {}
     return;
   }
-  await ctx.answerCbQuery();
+  try { await ctx.answerCbQuery(); } catch (e) {}
   await showAllUsers(ctx);
   await showUserManagementMenu(ctx);
 });
 
 bot.action('admin_reset_user', async (ctx) => {
   if (!(await isAdmin(ctx.from.id))) {
-    await ctx.answerCbQuery('Hanya Admin yang bisa mengakses menu ini.');
+    try { await ctx.answerCbQuery('Hanya Admin yang bisa mengakses menu ini.'); } catch (e) {}
     return;
   }
-  await ctx.answerCbQuery();
+  try { await ctx.answerCbQuery(); } catch (e) {}
   adminSession.set(ctx.from.id, { action: 'reset_user' });
   await ctx.reply('Masukkan ID Telegram user yang ingin di-reset role-nya:');
 });
 
 bot.action('admin_hapus_user', async (ctx) => {
   if (!(await isAdmin(ctx.from.id))) {
-    await ctx.answerCbQuery('Hanya Admin yang bisa mengakses menu ini.');
+    try { await ctx.answerCbQuery('Hanya Admin yang bisa mengakses menu ini.'); } catch (e) {}
     return;
   }
-  await ctx.answerCbQuery();
+  try { await ctx.answerCbQuery(); } catch (e) {}
   adminSession.set(ctx.from.id, { action: 'delete_user' });
   await ctx.reply('Masukkan ID Telegram user yang ingin dihapus:');
 });
 
 bot.action('admin_edit_user', async (ctx) => {
   if (!(await isAdmin(ctx.from.id))) {
-    await ctx.answerCbQuery('Hanya Admin yang bisa mengakses menu ini.');
+    try { await ctx.answerCbQuery('Hanya Admin yang bisa mengakses menu ini.'); } catch (e) {}
     return;
   }
-  await ctx.answerCbQuery();
+  try { await ctx.answerCbQuery(); } catch (e) {}
   adminSession.set(ctx.from.id, { action: 'edit_user', step: 1 });
   await ctx.reply('Masukkan ID Telegram user yang ingin diubah role-nya:');
 });
@@ -497,11 +497,11 @@ bot.action(/rollback_select_(\d+)/, async (ctx) => {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   
   if (!order) {
-    await ctx.answerCbQuery('Order tidak ditemukan');
+    try { await ctx.answerCbQuery('Order tidak ditemukan'); } catch (e) {}
     return;
   }
   
-  await ctx.answerCbQuery(`Orbit ${order.kodePerangkat} dipilih`);
+  try { await ctx.answerCbQuery(`Orbit ${order.kodePerangkat} dipilih`); } catch (e) {}
   
   const messageText = buildOrderMessage(order, 'Selesai - Siap di-rollback');
   const keyboard = Markup.inlineKeyboard([
@@ -511,11 +511,11 @@ bot.action(/rollback_select_(\d+)/, async (ctx) => {
   await ctx.reply(messageText, keyboard);
 });
 
-// Callback untuk eksekusi rollback (klik Selesai)
+// Callback untuk eksekusi rollback
 bot.action(/rollback_execute_(\d+)/, async (ctx) => {
   const userId = ctx.from.id;
   if (!(await isAdminOrSO(userId))) {
-    await ctx.answerCbQuery('⛔ Hanya Admin atau SO AREA yang bisa melakukan rollback.');
+    try { await ctx.answerCbQuery('⛔ Hanya Admin atau SO AREA yang bisa melakukan rollback.'); } catch (e) {}
     return;
   }
   
@@ -531,17 +531,17 @@ bot.action(/rollback_execute_(\d+)/, async (ctx) => {
     }
   });
   
-  await ctx.answerCbQuery(`Orbit ${order.kodePerangkat} di-rollback`);
+  try { await ctx.answerCbQuery(`Orbit ${order.kodePerangkat} di-rollback`); } catch (e) {}
   await ctx.editMessageText(`✅ Orbit ${order.kodePerangkat} berhasil di-rollback ke status pending.`);
   await ctx.reply(`✅ Orbit ${order.kodePerangkat} telah di-rollback.`);
 });
 
-// Callback untuk batal rollback (klik Batal)
+// Callback untuk batal rollback
 bot.action(/rollback_cancel_(\d+)/, async (ctx) => {
   const orderId = parseInt(ctx.match[1]);
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   
-  await ctx.answerCbQuery(`Rollback dibatalkan`);
+  try { await ctx.answerCbQuery(`Rollback dibatalkan`); } catch (e) {}
   await ctx.editMessageText(`❌ Rollback untuk orbit ${order?.kodePerangkat} dibatalkan.`);
 });
 
@@ -549,7 +549,7 @@ bot.action(/rollback_cancel_(\d+)/, async (ctx) => {
 bot.action(/rollback_(\d+)/, async (ctx) => {
   const userId = ctx.from.id;
   if (!(await isAdminOrSO(userId))) {
-    await ctx.answerCbQuery('⛔ Hanya Admin atau SO AREA yang bisa melakukan rollback.');
+    try { await ctx.answerCbQuery('⛔ Hanya Admin atau SO AREA yang bisa melakukan rollback.'); } catch (e) {}
     return;
   }
   const orderId = parseInt(ctx.match[1]);
@@ -563,7 +563,7 @@ bot.action(/rollback_(\d+)/, async (ctx) => {
       completedAt: null
     }
   });
-  await ctx.answerCbQuery('Order di-rollback');
+  try { await ctx.answerCbQuery('Order di-rollback'); } catch (e) {}
   await sendOrEditOrderMessage(ctx, order, 'pending');
   await ctx.reply(`Order ${order.orderNumber} telah di-rollback ke status pending.`);
 });
@@ -571,7 +571,7 @@ bot.action(/rollback_(\d+)/, async (ctx) => {
 bot.action(/accept_(\d+)/, async (ctx) => {
   const userId = ctx.from.id;
   if (!(await isAdminOrSO(userId))) {
-    await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa accept.');
+    try { await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa accept.'); } catch (e) {}
     return;
   }
   const orderId = parseInt(ctx.match[1]);
@@ -579,24 +579,24 @@ bot.action(/accept_(\d+)/, async (ctx) => {
     where: { id: orderId },
     data: { status: 'accepted', acceptedBy: ctx.from.username || 'unknown', acceptedAt: new Date() }
   });
-  await ctx.answerCbQuery('Order diterima');
+  try { await ctx.answerCbQuery('Order diterima'); } catch (e) {}
   await sendOrEditOrderMessage(ctx, order, 'accepted', ctx.from.username);
 });
 
 bot.action(/reject_(\d+)/, async (ctx) => {
   if (!(await isAdminOrSO(ctx.from.id))) {
-    await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa reject.');
+    try { await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa reject.'); } catch (e) {}
     return;
   }
   const orderId = parseInt(ctx.match[1]);
   const order = await prisma.order.update({ where: { id: orderId }, data: { status: 'rejected' } });
-  await ctx.answerCbQuery('Order ditolak');
+  try { await ctx.answerCbQuery('Order ditolak'); } catch (e) {}
   await ctx.reply(`Order ${order.orderNumber} - DITOLAK`);
 });
 
 bot.action(/done_(\d+)/, async (ctx) => {
   if (!(await isAdminOrSO(ctx.from.id))) {
-    await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa menyelesaikan.');
+    try { await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa menyelesaikan.'); } catch (e) {}
     return;
   }
   const orderId = parseInt(ctx.match[1]);
@@ -604,18 +604,18 @@ bot.action(/done_(\d+)/, async (ctx) => {
     where: { id: orderId },
     data: { status: 'done', completedBy: ctx.from.username || 'unknown', completedAt: new Date() }
   });
-  await ctx.answerCbQuery('Order selesai');
+  try { await ctx.answerCbQuery('Order selesai'); } catch (e) {}
   await sendOrEditOrderMessage(ctx, order, 'done', ctx.from.username);
 });
 
 bot.action(/cancel_(\d+)/, async (ctx) => {
   if (!(await isAdminOrSO(ctx.from.id))) {
-    await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa membatalkan.');
+    try { await ctx.answerCbQuery('Hanya Admin atau SO AREA yang bisa membatalkan.'); } catch (e) {}
     return;
   }
   const orderId = parseInt(ctx.match[1]);
   const order = await prisma.order.update({ where: { id: orderId }, data: { status: 'cancelled' } });
-  await ctx.answerCbQuery('Order dibatalkan');
+  try { await ctx.answerCbQuery('Order dibatalkan'); } catch (e) {}
   await ctx.reply(`Order ${order.orderNumber} - DIBATALKAN`);
 });
 
@@ -679,7 +679,6 @@ bot.command('adduser', async (ctx) => {
   await ctx.reply(`User ${username} (ID: ${telegramId}) dengan role ${role} berhasil ditambahkan/diupdate.`);
 });
 
-// COMMAND /status - untuk semua role yang punya role
 bot.command('status', async (ctx) => {
   if (!isGroupChat(ctx)) {
     return;
@@ -695,7 +694,6 @@ bot.command('status', async (ctx) => {
   await showStatusCommand(ctx);
 });
 
-// COMMAND /rollback - semua role bisa lihat daftar, tapi eksekusi hanya ADMIN/SOAREA
 bot.command('rollback', async (ctx) => {
   if (!isGroupChat(ctx)) {
     return;
