@@ -506,10 +506,17 @@ bot.action(/rollback_(\d+)/, async (ctx) => {
   const orderId = parseInt(ctx.match[1]);
   const order = await prisma.order.update({
     where: { id: orderId },
-    data: { status: 'pending', acceptedBy: null, acceptedAt: null, completedBy: null, completedAt: null }
+    data: { 
+      status: 'pending', 
+      acceptedBy: null, 
+      acceptedAt: null, 
+      completedBy: null
+      // completedAt TIDAK dihapus, agar bisa dideteksi sebagai rollback
+    }
   });
   await ctx.answerCbQuery('Order di-rollback');
   await sendOrEditOrderMessage(ctx, order, 'pending');
+  await ctx.reply(`Order ${order.orderNumber} telah di-rollback ke status pending.`);
 });
 
 // ==================== COMMANDS ====================
