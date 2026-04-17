@@ -27,7 +27,8 @@ model User {
 
 model Order {
   id                Int       @id @default(autoincrement())
-  orderNumber       String    @unique
+  orderNumber       String
+  chatId            BigInt
   customer          String
   kodePerangkat     String
   noTiket           String
@@ -46,4 +47,6 @@ model Order {
   cancelledAt       DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+
+  @@unique([chatId, orderNumber])
 }

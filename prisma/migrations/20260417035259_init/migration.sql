@@ -21,6 +21,7 @@ CREATE TABLE "User" (
 CREATE TABLE "Order" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "orderNumber" TEXT NOT NULL,
+    "chatId" BIGINT NOT NULL,
     "customer" TEXT NOT NULL,
     "kodePerangkat" TEXT NOT NULL,
     "noTiket" TEXT NOT NULL,
@@ -45,4 +46,4 @@ CREATE TABLE "Order" (
 CREATE UNIQUE INDEX "User_telegramId_key" ON "User"("telegramId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Order_orderNumber_key" ON "Order"("orderNumber");
+CREATE UNIQUE INDEX "Order_chatId_orderNumber_key" ON "Order"("chatId", "orderNumber");
